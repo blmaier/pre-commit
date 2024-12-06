@@ -14,6 +14,7 @@ from pre_commit.languages import julia
 from pre_commit.languages import lua
 from pre_commit.languages import node
 from pre_commit.languages import perl
+from pre_commit.languages import pixi
 from pre_commit.languages import pygrep
 from pre_commit.languages import python
 from pre_commit.languages import r
@@ -38,6 +39,7 @@ languages: dict[str, Language] = {
     'lua': lua,
     'node': node,
     'perl': perl,
+    'pixi': pixi,
     'pygrep': pygrep,
     'python': python,
     'r': r,
