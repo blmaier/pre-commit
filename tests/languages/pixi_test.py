@@ -100,6 +100,10 @@ def test_pixi_run(tmp_path, py_version, is_local):
         'name = "hello_world"\n'
         'version = "0.1.0"\n'
         '\n'
+        '[system-requirements]\n'
+        'libc = "2.19"\n'
+        'linux = "4.4"\n'
+        '\n'
         '[dependencies]\n'
         'python = "==' + py_version + '"\n',
     )
