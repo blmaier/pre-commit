@@ -11,6 +11,7 @@ from pre_commit.envcontext import envcontext
 from pre_commit.languages import pixi
 from pre_commit.util import cmd_output
 from testing.language_helpers import run_language
+from testing.util import cwd
 
 ACTUAL_GET_DEFAULT_VERSION = pixi.get_default_version.__wrapped__
 
@@ -78,9 +79,21 @@ PY_CMD_VERSION = (
 )
 
 
-@pytest.mark.parametrize('py_version', ['3.8.5', '3.12.4'])
-def test_pixi_run_with_config(tmp_path, py_version):
-    tmp_path.joinpath('pixi.toml').write_text(
+@pytest.mark.parametrize('py_version,is_local', [
+    ('3.8.5', False),
+    ('3.8.5', True),
+    ('3.12.4', False),
+    ('3.12.4', True),
+])
+def test_pixi_run(tmp_path, py_version, is_local):
+    prefix = tmp_path.joinpath('prefix')
+    local = tmp_path.joinpath('local')
+    prefix.mkdir()
+    local.mkdir()
+
+    pixi_toml = (local if is_local else prefix).joinpath('pixi.toml')
+
+    pixi_toml.write_text(
         '[project]\n'
         'channels = ["conda-forge"]\n'
         'platforms = ["win-64", "linux-64", "osx-64"]\n'
@@ -91,26 +104,14 @@ def test_pixi_run_with_config(tmp_path, py_version):
         'python = "==' + py_version + '"\n',
     )
 
-    ret, out = run_language(
-        tmp_path,
-        pixi,
-        PY_CMD_VERSION,
-        version='v0.38.0',
-    )
-
-    assert out.decode().strip() == py_version
-    assert ret == 0
-
-
-@pytest.mark.parametrize('py_version', ['3.8.5', '3.12.4'])
-def test_pixi_run_additional_deps(tmp_path, py_version):
-    ret, out = run_language(
-        tmp_path,
-        pixi,
-        PY_CMD_VERSION,
-        version='v0.38.0',
-        deps=['python ==' + py_version],
-    )
+    with cwd(local):
+        ret, out = run_language(
+            prefix,
+            pixi,
+            PY_CMD_VERSION,
+            version='v0.38.0',
+            is_local=is_local,
+        )
 
     assert out.decode().strip() == py_version
     assert ret == 0

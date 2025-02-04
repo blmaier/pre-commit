@@ -100,20 +100,6 @@ def install_environment(
         if version != 'system':
             _install_pixi(envdir, _pixi_version(version))
 
-        if not os.path.isfile(prefix.path('pixi.toml')):
-            lang_base.setup_cmd(prefix, ('pixi', 'init', '--format', 'pixi'))
-
-        if additional_dependencies:
-            lang_base.setup_cmd(
-                prefix, ('pixi', 'add', '--', *additional_dependencies),
-            )
-
-        # We can't rely on pixi-run to install the environment, as the run_hook
-        # runs concurrently and breaks installation. Install everything here so
-        # it is done in serial.
-        # See https://github.com/prefix-dev/pixi/issues/1482
-        lang_base.setup_cmd(prefix, ('pixi', 'install', '--all'))
-
 
 def run_hook(
     prefix: Prefix,
@@ -125,14 +111,32 @@ def run_hook(
     require_serial: bool,
     color: bool,
 ) -> tuple[int, bytes]:
+
+    if is_local:
+        project = os.path.join(os.getcwd(), 'pixi.toml')
+    else:
+        project = prefix.path('pixi.toml')
+
+    cmd = *lang_base.hook_cmd(entry, args),
+
+    # We can't rely on pixi-run to install the environment, as the run_hook
+    # runs concurrently and breaks installation. Install everything here so it
+    # is done in serial.
+    # See https://github.com/prefix-dev/pixi/issues/1482
+    if cmd[0] in ('-e', '--environment'):
+        env = cmd[1]
+    elif cmd[0].startswith('-e=') or cmd[0].startswith('--environment='):
+        env = cmd[0].split('=', maxsplit=1)[1]
+    else:
+        env = 'default'
+    cmd_output_b('pixi', 'install', '--manifest-path', project, '-e', env)
+
     cmd = (
         'pixi',
         'run',
         '--manifest-path',
-        prefix.path('pixi.toml'),
-        '--no-lockfile-update',
-        '--',
-        *lang_base.hook_cmd(entry, args),
+        project,
+        *cmd,
     )
 
     return lang_base.run_xargs(
